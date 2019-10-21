@@ -26,6 +26,7 @@ public class MessagesRepository {
 
     private static final String GET_MESSAGE_BY_ID = "SELECT * from messages where id = ?";
     private static final String INSERT_MESSAGE = "INSERT INTO messages (user_id, message) VALUES (?, ?)";
+    private static final String GET_ALL_MESSAGES_WITH_USERS = "SELECT messages.id as message_id, user_id, message, username, token, role FROM messages join users_table ut on messages.user_id = ut.id;";
 
     public Optional<Message> readMessage(Long id) {
         return Optional.of(jdbcTemplate.queryForObject(GET_MESSAGE_BY_ID, rowMapper));
@@ -33,6 +34,10 @@ public class MessagesRepository {
 
     public void saveMessage(Message message) {
         jdbcTemplate.update(INSERT_MESSAGE, message.getUserId(), message.getMessage());
+    }
+
+    public List<MessageWithUser> getMessages() {
+        return jdbcTemplate.query(GET_ALL_MESSAGES_WITH_USERS, rowMapperWithUser);
     }
 
 
@@ -46,6 +51,24 @@ public class MessagesRepository {
                     .build();
         }
     };
+
+    private RowMapper<MessageWithUser> rowMapperWithUser = new RowMapper<MessageWithUser>() {
+        @Override
+        public MessageWithUser mapRow(ResultSet resultSet, int i) throws SQLException {
+            return MessageWithUser.builder()
+                    .id(resultSet.getLong("message_id"))
+                    .message(resultSet.getString("message"))
+                    .user(User.builder()
+                            .id(resultSet.getLong("user_id"))
+                            .username(resultSet.getString("username"))
+                            .token(resultSet.getString("token"))
+                            .role(Role.roleFromString(resultSet.getString("role")))
+                            .build())
+                    .build();
+        }
+    };
+
+
 
 
 }

@@ -1,35 +1,78 @@
 package ru.itis.chat.services;
 
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestParam;
+import ru.itis.chat.controllers.Statics;
 import ru.itis.chat.dto.UserDto;
 import ru.itis.chat.models.Role;
 import ru.itis.chat.models.User;
 import ru.itis.chat.repositories.UsersRepository;
 
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class UsersService {
+
     @Autowired
     private UsersRepository usersRepository;
 
+    @Value("${jwt.enabled}")
+    private Boolean jwtEnabled;
+
     public UserDto registerUserByToken(String name) {
-        // чтобы кинуть токен обратно юзеру
-        UserDto userDto = UserDto.builder()
-                .username(name)
-                .token(UUID.randomUUID().toString())
-                .role(Role.USER)
-                .build();
-        // для бд
-        User user = User.builder()
-                .username(name)
-                .token(userDto.getToken())
-                .role(userDto.getRole())
-                .build();
-        usersRepository.saveUser(user);
+
+        UserDto userDto;
+
+        if(jwtEnabled){
+            // для бд
+            User user = User.builder()
+                    .username(name)
+                  //  .token(userDto.getToken())
+                    .role(Role.USER)
+                    .build();
+            usersRepository.saveUser(user);
+
+            Map<String, Object> claims = new HashMap<>();
+
+            claims.put("userId", user.getId());
+            claims.put("username", user.getUsername());
+            claims.put("role", user.getRole().toString());
+
+            String token = Jwts.builder().setClaims(claims)
+                    .setSubject(user.getId().toString())
+                   // .setIssuedAt(createdDate)
+                    .setId(claims.get("userId").toString())
+                    //.setExpiration(expirationDate)
+                    .signWith(SignatureAlgorithm.HS512, Statics.jwtSecret).compact();
+
+            // чтобы кинуть токен обратно юзеру
+            userDto = UserDto.builder()
+                    .username(user.getUsername())
+                    .token(token)
+                    .role(user.getRole())
+                    .build();
+
+        } else {
+            String token = UUID.randomUUID().toString();
+            // чтобы кинуть токен обратно юзеру
+            userDto = UserDto.builder()
+                    .username(name)
+                    .token(token)
+                    .role(Role.USER)
+                    .build();
+            // для бд
+            User user = User.builder()
+                    .username(name)
+                    .token(userDto.getToken())
+                    .role(userDto.getRole())
+                    .build();
+            usersRepository.saveUser(user);
+        }
+
         return userDto;
     }
 
@@ -43,6 +86,4 @@ public class UsersService {
                 .role(user.getRole())
                 .build();
     }
-
-
 }

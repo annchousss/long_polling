@@ -6,26 +6,40 @@ function sendMessage(text) {
         type: 'post',
         url: '/messages',
         data: {"message": text},
-        headers:{
-            "Authorization" : localStorage.getItem("token")
+        headers: {
+            "Authorization": localStorage.getItem("token")
         },
     }).done(function (data) {
+        // let table = '';
+        // for (let i = 0; i < data.length; i++)
+        //      table +='<li>' + data[i].username + ": " + data[i].message + '</li>';
+        //
+        // document.getElementById("messages").innerHTML = table;
 
     });
 }
+
 function receiveMessage() {
     $.ajax({
         url: "/messages",
         method: "GET",
         dataType: "json",
         contentType: "application/json",
-        headers:{
-            "Authorization" : localStorage.getItem("token")
+        headers: {
+            "Authorization": localStorage.getItem("token")
         },
-        success: function (response) {
-            if(response != null)
-                $('#messages').first().after('<li>' + response[0].username + ": " + response[0].message + '</li>')
-            receiveMessage(pageId);
+        success: function (data) {
+            // let table = '';
+            // for (let i = 0; i < data.length; i++)
+            //     table +='<li>' + data[i].username + ": " + data[i].message + '</li>';
+            //
+            // let old = document.getElementById("messages").innerHTML;
+            // document.getElementById("messages").innerHTML = old + table;
+            $('#messages').first().after('<li>' + data[0]['username'] + ': ' + data[0]['message'] + '</li>');
+            receiveMessage();
+            // if (response != null)
+            //     for (let i = 0; i < response.length; i++)
+            //         $('#messages').first().after('<li>' + response[i].username + ": " + response[i].message + '</li>')
         }
     })
 }
@@ -42,7 +56,7 @@ function authorize() {
         localStorage.setItem('token', data.token);
 
         let div = "<h1>Ваш Id: " + data.token + "</h1>\n" +
-        + "<h1>Ваш нэйм: " + data.username + "</h1>\n" +
+            +"<h1>Ваш нэйм: " + data.username + "</h1>\n" +
             "<div>\n" +
             "    <input id=\"message\" placeholder=\"Ваше сообщение\">\n" +
             "    <button onclick=\"sendMessage(" +
@@ -55,8 +69,24 @@ function authorize() {
             "</div>";
 
         document.getElementById("content").innerHTML = div;
+
+        $.ajax({
+            url: "/messagesAll",
+            method: "GET",
+            dataType: "json",
+            contentType: "application/json",
+            headers: {
+                "Authorization": localStorage.getItem("token")
+            },
+            success: function (data) {
+                let table = '';
+                for (let i = 0; i < data.length; i++)
+                    table += '<li>' + data[i].username + ": " + data[i].message + '</li>';
+                document.getElementById("messages").innerHTML = table;
+            }});
+
         sendMessage("Hi");
-        receiveMessage(data.token);
+        receiveMessage();
 
     }).fail(function () {
         alert("НЕ ОЧ");
@@ -64,6 +94,7 @@ function authorize() {
 
 
 }
+
 //
 // $(document).ready(function () {
 //    sendMessage(pageId, 'Hi');

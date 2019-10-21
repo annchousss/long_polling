@@ -3,10 +3,13 @@ package ru.itis.chat.repositories;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Component;
 import ru.itis.chat.models.Role;
 import ru.itis.chat.models.User;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
@@ -16,9 +19,9 @@ public class UsersRepository {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private static final String GET_USER_BY_ID = "SELECT * from user_table where id = ?";
-    private static final String INSERT_USER = "INSERT INTO user_table (username, token, role) VALUES (?, ?, ?)";
-    private static final String GET_USER_BY_TOKEN = "SELECT * from user_table where token = ?";
+    private static final String GET_USER_BY_ID = "SELECT * from users_table where id = ?";
+    private static final String INSERT_USER = "INSERT INTO users_table (username, token, role) VALUES (?, ?, ?)";
+    private static final String GET_USER_BY_TOKEN = "SELECT * from users_table where token = ?";
 
 
     public Optional<User> readUser(Long id) {
@@ -26,7 +29,19 @@ public class UsersRepository {
     }
 
     public void saveUser(User user) {
-        jdbcTemplate.update(INSERT_USER, user.getUsername(), user.getToken(), user.getRole().toString());
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(
+                connection -> {
+                    PreparedStatement ps =
+                            connection.prepareStatement(INSERT_USER, new String[] {"id"});
+                    ps.setString(1, user.getUsername());
+                    ps.setString(2, user.getToken());
+                    ps.setString(3, user.getRole().toString());
+
+                    return ps;
+                }, keyHolder);
+        user.setId(keyHolder.getKey().longValue());
+        //jdbcTemplate.update(INSERT_USER, user.getUsername(), user.getToken(), user.getRole().toString());
     }
 
     public Optional<User> readUserByToken(String token) {
